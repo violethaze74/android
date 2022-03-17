@@ -32,6 +32,7 @@ import android.content.OperationApplicationException;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.text.TextUtils;
@@ -1719,6 +1720,7 @@ public class FileDataStorageManager {
         return shares;
     }
 
+
     public static void triggerMediaScan(String path) {
         triggerMediaScan(path, null);
     }
@@ -1727,7 +1729,24 @@ public class FileDataStorageManager {
         if (path != null && !TextUtils.isEmpty(path)) {
             ContentValues values = new ContentValues();
             ContentResolver contentResolver = MainApp.getAppContext().getContentResolver();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                final String downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+                if (path.startsWith(downloadsPath)) {
+                    final String pathWithinDownloads = path.substring(downloadsPath.length());
+                    if (file != null) {
+                        values.put(MediaStore.Downloads.MIME_TYPE, file.getMimeType());
+                        values.put(MediaStore.Downloads.TITLE, file.getFileName());
+                        values.put(MediaStore.Downloads.DISPLAY_NAME, file.getFileName());
+                    }
+                    values.put(MediaStore.Downloads.DATE_ADDED, System.currentTimeMillis() / 1000);
+                    values.put(MediaStore.Downloads.RELATIVE_PATH, pathWithinDownloads);
+                    values.put(MediaStore.Downloads.IS_PENDING, 0);
+                    contentResolver.insert(MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+                                           values);
+                } else {
+                    Log_OC.w(TAG, "Can't add file to media scanner (not in Downloads, sdk >=30)");
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if (file != null) {
                     values.put(MediaStore.Images.Media.MIME_TYPE, file.getMimeType());
                     values.put(MediaStore.Images.Media.TITLE, file.getFileName());
@@ -1740,7 +1759,7 @@ public class FileDataStorageManager {
                     contentResolver.insert(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
                                            values);
                 } catch (IllegalArgumentException e) {
-                    Log_OC.e("MediaScanner", "Adding image to media scanner failed: " + e);
+                    Log_OC.e(TAG, "Adding image to media scanner failed: " + e);
                 }
             } else {
                 Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
