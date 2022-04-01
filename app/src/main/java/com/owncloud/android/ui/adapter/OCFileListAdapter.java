@@ -139,6 +139,7 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     private boolean showShareAvatar = false;
     private OCFile highlightedItem;
     private boolean showMetadata = true;
+    private SearchType searchType;
 
     public OCFileListAdapter(
         Activity activity,
@@ -529,7 +530,7 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                 }
             }
 
-            if (gridView || hideItemOptions || (file.isFolder() && !file.canReshare())) {
+            if (gridView || hideItemOptions || (file.isFolder() && !file.canReshare()) || searchType == SearchType.FAVORITE_SEARCH) {
                 gridViewHolder.getShared().setVisibility(View.GONE);
             } else {
                 showShareIcon(gridViewHolder, file);
@@ -862,6 +863,8 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             mFilesAll.clear();
         }
 
+        searchType = null;
+
         notifyDataSetChanged();
     }
 
@@ -920,6 +923,8 @@ public class OCFileListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         } else {
             mFiles = FileStorageUtils.sortOcFolderDescDateModifiedWithoutFavoritesFirst(mFiles);
         }
+
+        this.searchType = searchType;
 
         mFilesAll.clear();
         mFilesAll.addAll(mFiles);
